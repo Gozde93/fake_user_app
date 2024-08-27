@@ -1,0 +1,82 @@
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: circleci/openjdk:11-jdk
+    working_directory: ~/fake-user-app
+    steps:
+      - checkout
+      - run:
+          name: Create a Directory
+          command: mkdir -p ~/fake-user-app
+      - restore_cache:
+          - keys:
+              - fake-user-app-dependencies-{{ checksum "pom.xml" }}
+      - run:
+          name: Build (Create JAR File)
+          command: mvn clean package -DskipTests
+      - save_cache:
+          -paths:
+            - ~/.m2
+          -key: fake-user-app-dependencies-{{ checksum "pom.xml" }}
+      - persist_to_workspace:
+          root: ~/fake-user-app
+          paths:
+            - .
+  test:
+    machine: true
+    working_directory: ~/fake-user-app
+    steps:
+      - attach_workspace:
+          at: ~/fake-user-app
+      - run:
+          name: Docker Container That Runs Postgresql In It (Fake DB)
+          command: docker run --name test-db -p 5432:5432 -e POSTGRES_DB=fake_user_app -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=Gozde9391 postgres:latest
+      - run:
+          name: Run Integration Tests and Unit Tests
+          command: | 
+           mvn test -Dskip.unit.tests=false -Dskip.integration.tests=false  \
+           -Dspring.datasource.url=jdbc:postgresql://localhost:5432/fake-user-app \
+           -Dspring.datasource.username=postgres
+           -Dspring.datasource.password=Gozde9391
+  docker-image-create-and-push:
+    machine: true
+    working_directory: ~/fake-user-app
+    steps:
+      - attach_workspace:
+          at: ~/fake-user-app
+      - run:
+        name: Create Docker Image
+        command: docker build -t 337909776146.dkr.ecr.us-east-2.amazonaws.com/fake-user-app:latest .
+      - run:
+          name: Login to Image Repo (AWS ECR)
+          command: aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 337909776146.dkr.ecr.us-east-2.amazonaws.com
+      - run:
+          name: Push the image ECR
+          command: docker push 337909776146.dkr.ecr.us-east-2.amazonaws.com/fake-user-app:latest
+  deploy:
+    machine: true
+    steps:
+      - run:
+          name: Connect to EC2 Server and run the image
+          command: |
+            ssh -o "StrictHostKeyChecking=no" ubuntu@ec2-18-220-208-32.us-east-2.compute.amazonaws.com <<'ENDSSH'
+            /bin/bash ~/fake-user-app3/deploy_image.sh
+            ENDSSH
+            
+
+workflows:
+  version: 2
+  build_test_deploy:
+    jobs:
+      - build
+      - test:
+          requires:
+            - build
+      - docker-image-create-and-push:
+          requires:
+            - test
+      - deploy:
+          requires:
+            - docker-image-create-and-push
