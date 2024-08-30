@@ -11,7 +11,7 @@ jobs:
           name: Create a Directory
           command: mkdir -p ~/fake-user-app
       - restore_cache:
-          - keys:
+          keys:
               - fake-user-app-dependencies-{{ checksum "pom.xml" }}
       - run:
           name: Build (Create JAR File)
