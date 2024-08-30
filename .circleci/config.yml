@@ -12,7 +12,7 @@ jobs:
           command: mkdir -p ~/fake-user-app
       - restore_cache:
           keys:
-              - fake-user-app-dependencies-{{ checksum "pom.xml" }}
+            - fake-user-app-dependencies-{{ checksum "pom.xml" }}
       - run:
           name: Build (Create JAR File)
           command: mvn clean package -DskipTests
