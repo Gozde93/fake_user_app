@@ -48,20 +48,20 @@ jobs:
           at: ~/fake-user-app
       - run:
         name: Create Docker Image
-        command: docker build -t 337909776146.dkr.ecr.us-east-2.amazonaws.com/fake-user-app:latest .
+        command: docker build -t $ECR_URL/fake-user-app:latest .
       - run:
           name: Login to Image Repo (AWS ECR)
           command: aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 337909776146.dkr.ecr.us-east-2.amazonaws.com
       - run:
           name: Push the image ECR
-          command: docker push 337909776146.dkr.ecr.us-east-2.amazonaws.com/fake-user-app:latest
+          command: docker push  $ECR_URL/fake-user-app:latest
   deploy:
     machine: true
     steps:
       - run:
           name: Connect to EC2 Server and run the image
           command: |
-            ssh -o "StrictHostKeyChecking=no" ubuntu@ec2-18-220-208-32.us-east-2.compute.amazonaws.com <<'ENDSSH'
+            ssh -o "StrictHostKeyChecking=no" $SERVER_USERNAME@$SERVER_HOSTNAME <<'ENDSSH'
             /bin/bash ~/fake-user-app3/deploy_image.sh
             ENDSSH
             
