@@ -17,7 +17,7 @@ jobs:
           name: Build (Create JAR File)
           command: mvn clean package -DskipTests
       - save_cache:
-          -paths:
+          paths:
             - ~/.m2
           -key: fake-user-app-dependencies-{{ checksum "pom.xml" }}
       - persist_to_workspace:
